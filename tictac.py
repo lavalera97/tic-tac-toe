@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import tkinter as tk
-from tkinter import messagebox
+from winning_conditions import winning_conditions
+from itertools import groupby
 
 
 class TicTacToe(tk.Tk):
@@ -10,8 +11,8 @@ class TicTacToe(tk.Tk):
         self._main_canvas = None
         self.switch_canvas(StartPage)
 
-    """Initializing func to switch between canvases / Создаём функцию для смены работающего окна"""
     def switch_canvas(self, canvas_class):
+        """Initializing func to switch between canvases / Создаём функцию для смены работающего окна"""
         if self._main_canvas:
             self._main_canvas.pack_forget()
         canvas = canvas_class(self)
@@ -19,8 +20,8 @@ class TicTacToe(tk.Tk):
 
 
 class StartPage(tk.Canvas):
-    """Creating starting page / Начальная страница"""
     def __init__(self, master, *args, **kwargs):
+        """Creating starting page / Начальная страница"""
         super().__init__(master, *args, **kwargs)
         self.pack(pady=25, padx=30)
         tk.Label(self, text="TIC-TAC-TOE", font=('Segoe Print', 20, 'bold')).grid(column=0, row=0, pady=5, padx=30)
@@ -32,8 +33,8 @@ class StartPage(tk.Canvas):
 
 
 class CreateBoard(tk.Canvas, ABC):
-    """Setting our base board to play with/ Создаём поле для игры"""
     def __init__(self, master, *args, **kwargs):
+        """Setting our base board to play with/ Создаём поле для игры"""
         super().__init__(master, *args, **kwargs)
         self.master = master
         self.pack(pady=(20, 60), padx=40)
@@ -62,12 +63,31 @@ class CreateBoard(tk.Canvas, ABC):
             for n in range(10):
                 self.buttons.append(x)
                 self.buttons[x] = tk.Button(
-                    self, text='', bd=4, height=3, width=6, state=tk.DISABLED)
+                    self, text='', bd=4, height=1, width=4, font=("Segoe Print", 14, 'bold'), state=tk.DISABLED, command=lambda x=x: self.make_move(x))
                 self.buttons[x].grid(row=i + 1, column=n)
                 x += 1
 
+    def check_winner_conditions(self):
+        """Checking if player or bot won / Проверяем возможность выигрыша игрока или бота"""
+        win = False
+        for condition in winning_conditions:
+            not_empty = all(self.board[ele] != '' for ele in condition)
+            x_sign = all(self.board[ele] == 'X' for ele in condition)
+            o_sign = all(self.board[ele] == 'O' for ele in condition)
+            print(not_empty)
+            if not_empty and (x_sign or o_sign):
+                win = True
+                for i in condition:
+                    self.buttons[i].configure(bg='green')
+                break
+        return win
+
     @abstractmethod
     def start_game(self, sign):
+        pass
+
+    @abstractmethod
+    def make_move(self, button_number):
         pass
 
 
@@ -75,17 +95,51 @@ class PlayerVsPlayer(CreateBoard):
     def __init__(self, master, *args, **kwargs):
         super().__init__(master, *args, **kwargs)
         self.name_label['text'] = 'Player Vs Player'
-        self.player_one = 'x'
-        self.player_two = 'y'
+        self.player_one = 'First Player'
+        self.player_two = 'Second Player'
+        self.who_plays = self.player_one
         self.start_game('x')
 
     def start_game(self, sign):
         for i in self.buttons:
             i['state'] = tk.NORMAL
         self.restart.configure(command=lambda: self.master.switch_canvas(PlayerVsPlayer))
-        self.move_label['text'] = 'Player 1 Turn'
+        self.move_label['text'] = f'{self.who_plays}\nturn...'
         self.move_label.grid(column=10, row=4, rowspan=2, padx=(32, 0))
         self.restart['state'] = tk.NORMAL
+
+    def make_move(self, button_number):
+        """Checking if it's allowed to make a move to certain position. Disable all buttons in case current player won
+        Проверяем не занята ли нужная ячейка. Изменяем ее и проверяем не выиграл ли текущий игрок."""
+        print(self.board)
+        if self.buttons[button_number]['text'] != '':
+            pass
+        else:
+            if self.who_plays == self.player_one:
+                self.buttons[button_number]['text'] = 'X'
+                self.buttons[button_number]['fg'] = 'red'
+                self.board[button_number] = 'X'
+
+            else:
+                self.buttons[button_number]['text'] = 'O'
+                self.buttons[button_number]['fg'] = 'blue'
+                self.board[button_number] = 'O'
+            self.check_player_win()
+
+    def check_player_win(self):
+        """Disable all buttons in case current player won. Проверяем выиграл ли игрок,
+         в случае выигрыша отключаем все кнопки на поле"""
+        check_win = self.check_winner_conditions()
+        if check_win:
+            self.move_label['text'] = f'{self.who_plays}\nwins!'
+            for i in self.buttons:
+                i.configure(command=lambda: None)
+        else:
+            if self.who_plays == self.player_one:
+                self.who_plays = self.player_two
+            else:
+                self.who_plays = self.player_one
+            self.move_label['text'] = f'{self.who_plays}\nturn...'
 
 
 class PlayerVsAi(CreateBoard):
@@ -116,6 +170,9 @@ class PlayerVsAi(CreateBoard):
             self.player = 'o'
             self.ai = 'x'
             self.move_label['text'] = 'AI thinking'
+
+    def make_move(self, button_number):
+        pass
 
 
 if __name__ == '__main__':
