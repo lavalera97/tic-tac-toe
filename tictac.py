@@ -281,7 +281,6 @@ class PlayerVsAi(CreateBoard):
                     self.buttons[button_number]['fg'] = 'blue'
                     self.board[button_number] = 'O'
             x = self.check_play_state()
-            print(x)
             if not x:
                 if self.who_plays == self.player_one:
                     self.who_plays = self.player_two
@@ -328,6 +327,7 @@ class PlayerVsAi(CreateBoard):
 
             if bot_dict[0] == bot_dict[1] == bot_dict[2] == bot_dict[3] == bot_dict[4] == [] \
                     and player_dict[0] == player_dict[1] == player_dict[2] == player_dict[3] == player_dict[4] == []:
+                print('me1')
                 spaces_left = [k for k, v in self.board.items() if v == '']
                 self.button = random.choice(spaces_left)
 
@@ -374,10 +374,8 @@ class PlayerVsAi(CreateBoard):
                 for i in multiple_moves:
                     if self.board[i[0]] == self.board[i[4]] == '':
                         moves_without_values.append(i)
-                    print(moves_without_values)
                 if moves_without_values:
                     self.button = moves_without_values[0][0]
-                    print(self.button)
                 else:
                     multiple_moves = [i for i in player_dict[3]]
                     for i in player_dict[2]:
@@ -626,9 +624,9 @@ class PlayerVsAi(CreateBoard):
                                 break
 
             else:
-                for i in bot_dict[0]:
-                    for j in i:
-                        self.button = j
+                print('me2')
+                spaces_left = [k for k, v in self.board.items() if v == '']
+                self.button = random.choice(spaces_left)
 
             self.buttons[self.button].invoke()
 
