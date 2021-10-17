@@ -815,7 +815,7 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
                 self.button = self.best_ai_move
 
             elif len(self.bot_dict[2]) > 0:
-                possible_moves = [i for i in self.bot_dict[2] if i != self.ai_sign]
+                possible_moves = [i for i in self.bot_dict[2]]
                 all_moves = []
                 self.best_ai_move = None
                 current_length_4 = len(self.bot_dict[4])
@@ -849,7 +849,7 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
                 self.button = self.best_ai_move
 
             elif len(self.bot_dict[3]) > 0:
-                possible_moves = [i for i in self.bot_dict[3] if i != self.ai_sign]
+                possible_moves = [i for i in self.bot_dict[3]]
                 all_moves = []
                 self.best_ai_move = None
                 current_length_5 = len(self.bot_dict[5])
