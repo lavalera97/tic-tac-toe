@@ -93,18 +93,8 @@ class CreateBoard(tk.Canvas, ABC):
     def check_draw(self):
         """Checking if it's draw or not / Проверяем не закончилась ли игра ничьей"""
         draw = False
-        winning_conditions_left = True
-        condition_signs = []
-        for condition in self.all_winning_conditions:
-            condition_signs = [self.board[i] for i in condition]
-            condition_signs.append(condition_signs)
-        for i in condition_signs:
-            if (any(sign == 'X' for sign in i) and any(sign == 'O' for sign in i)) \
-                    and (not (any(sign == 'X' for sign in i) and any(sign == '' for sign in i))) \
-                    and (not (any(sign == 'O' for sign in i) and any(sign == '' for sign in i))):
-                winning_conditions_left = False
-                break
-        if not winning_conditions_left:
+        x = [k for k, v in self.board.items() if v == '']
+        if not x:
             draw = True
             self.move_label['text'] = f"It's Draw!"
         return draw
@@ -209,13 +199,12 @@ class PlayerVsAiBaseSettings(CreateBoard, ABC):
             self.player_sign = 'X'
             self.ai_sign = 'O'
             self.who_plays = self.player_one
-            self.move_label['text'] = f'{self.who_plays}\nturn'
         if sign == 'O':
             self.player_sign = 'O'
             self.ai_sign = 'X'
             self.who_plays = self.player_two
-            self.move_label['text'] = f'{self.who_plays}\nturn'
             self.ai_move()
+        self.move_label['text'] = f'Good luck!'
 
     def make_move(self, button_number):
         """Make move using buttons and then allow bot to make his move
@@ -247,10 +236,8 @@ class PlayerVsAiBaseSettings(CreateBoard, ABC):
                 if self.who_plays == self.player_one:
                     self.who_plays = self.player_two
                     self.ai_move()
-                    self.move_label['text'] = f'{self.who_plays}\nturn'
                 else:
                     self.who_plays = self.player_one
-                    self.move_label['text'] = f'{self.who_plays}\nturn'
             self.check_play_state()
 
     def ai_win_conditions(self):
@@ -341,19 +328,6 @@ class PlayerVsAi(PlayerVsAiBaseSettings):
         super().__init__(*args, **kwargs)
         self.restart.configure(command=lambda: self.master.switch_canvas(PlayerVsAi))
         self.name_label['text'] = 'Player Vs AI'
-
-    def check_play_state(self):
-        """Disable all buttons in case current player won or it's tie. Рассматриваем положение в игре,
-        если игрок выигрывает или наступает ничья, отключаем все кнопки на поле
-        """
-        check_win = self.check_winner_conditions()
-
-        endgame = False
-        if check_win:
-            for i in self.buttons:
-                i.configure(command=lambda: None)
-                endgame = True
-        return endgame
 
     def ai_move(self):
         """Implementing AI (commented code is for minimax algorithm) to place 5 signs in a row
@@ -695,6 +669,33 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
         self.restart.configure(command=lambda: self.master.switch_canvas(PlayerVsAiReverse))
         self.best_ai_move = 0
 
+    def check_winner_conditions(self):
+        """Checking if player or bot won / Проверяем возможность выигрыша игрока или бота"""
+        win = False
+        for condition in self.all_winning_conditions:
+            not_empty = all(self.board[ele] != '' for ele in condition)
+            x_sign = all(self.board[ele] == 'X' for ele in condition)
+            o_sign = all(self.board[ele] == 'O' for ele in condition)
+            if not_empty and (x_sign or o_sign):
+                win = True
+                self.move_label['text'] = f'{self.who_plays}\nlost!'
+                for i in condition:
+                    self.buttons[i].configure(bg='#FF5C58')
+                break
+        return win
+
+    def check_play_state(self):
+        """Disable all buttons in case current player or bot lost or it's tie. Рассматриваем положение в игре,
+        если игрок или бот проигрывает или наступает ничья, отключаем все кнопки на поле
+        """
+        check_win = self.check_winner_conditions()
+        endgame = False
+        if check_win:
+            for i in self.buttons:
+                i.configure(command=lambda: None)
+                endgame = True
+        return endgame
+
     def ai_move(self):
         """Implementing AI (commented code is for minimax algorithm) not to place 5 signs in a row
          Прописываем поведение бота, чтобы он не поставил 5 знаков в одну линию
@@ -704,7 +705,6 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
             self.button = random.choice(random_numbers)
         else:
             self.ai_win_conditions()
-            print(self.bot_dict)
 
             if len(self.bot_dict[1]) == 0 and len(self.bot_dict[2]) == 0 and len(self.bot_dict[3]) == 0 and len(self.bot_dict[4]) == 0:
                 move = random.choice([i for i in self.bot_dict[0]])
@@ -729,12 +729,10 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
                     if len(self.bot_dict[2]) == current_length_2 and len(self.bot_dict[3]) == current_length_3\
                             and len(self.bot_dict[4]) == current_length_4 and len(self.bot_dict[5]) == current_length_5:
                         self.best_ai_move = move
-                        self.ai_win_conditions()
                         self.board[move] = ''
                         break
                     else:
                         self.board[move] = ''
-                        self.ai_win_conditions()
                 if self.best_ai_move is None:
                     for move in shuffled_moves:
                         self.board[move] = self.ai_sign
@@ -742,17 +740,32 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
                         if len(self.bot_dict[3]) == current_length_3 and len(self.bot_dict[4]) == current_length_4 \
                                 and len(self.bot_dict[5]) == current_length_5:
                             self.best_ai_move = move
-                            self.ai_win_conditions()
                             self.board[move] = ''
                             break
-                        elif len(self.bot_dict[4]) == current_length_4 and len(self.bot_dict[5]) == current_length_5:
-                            self.best_ai_move = move
-                            self.ai_win_conditions()
+                        else:
                             self.board[move] = ''
-                            break
-
                 if self.best_ai_move is None:
-                    self.best_ai_move = random.choice(all_moves)
+                    for move in shuffled_moves:
+                        self.board[move] = self.ai_sign
+                        self.ai_win_conditions()
+                        if len(self.bot_dict[4]) == current_length_4 and len(self.bot_dict[5]) == current_length_5:
+                            self.best_ai_move = move
+                            self.board[move] = ''
+                            break
+                        else:
+                            self.board[move] = ''
+                if self.best_ai_move is None:
+                    for move in shuffled_moves:
+                        self.board[move] = self.ai_sign
+                        self.ai_win_conditions()
+                        if len(self.bot_dict[5]) == current_length_5:
+                            self.best_ai_move = move
+                            self.board[move] = ''
+                            break
+                        else:
+                            self.board[move] = ''
+                if self.best_ai_move is None:
+                    self.best_ai_move = random.choice(shuffled_moves)
                 self.button = self.best_ai_move
 
             elif len(self.bot_dict[1]) > 0:
@@ -761,107 +774,105 @@ class PlayerVsAiReverse(PlayerVsAiBaseSettings):
                 self.best_ai_move = None
                 current_length_3 = len(self.bot_dict[3])
                 current_length_4 = len(self.bot_dict[4])
+                current_length_5 = len(self.bot_dict[5])
                 for move in possible_moves:
                     for pos in move:
-                        if pos not in all_moves and self.board[pos] == '':
-                            all_moves.append(pos)
-                shuffled_moves = random.sample(all_moves, len(all_moves))
-                print(shuffled_moves)
-                for move in shuffled_moves:
-                    self.board[move] = self.ai_sign
-                    self.ai_win_conditions()
-                    if len(self.bot_dict[3]) == current_length_3 and len(self.bot_dict[4]) == current_length_4:
-                        self.best_ai_move = move
-                        self.ai_win_conditions()
-                        self.board[move] = ''
-                        break
-                    elif len(self.bot_dict[4]) == current_length_4:
-                        self.best_ai_move = move
-                        self.ai_win_conditions()
-                        self.board[move] = ''
-                    else:
-                        self.board[move] = ''
-                        self.ai_win_conditions()
-                if self.best_ai_move is None:
-                    for i in shuffled_moves:
-                        for move in self.bot_dict[4]:
-                            if i not in move:
-                                self.best_ai_move = i
-                self.button = self.best_ai_move
-
-            elif len(self.bot_dict[2]) > 0:
-                possible_moves = [i for i in self.bot_dict[2]]
-                all_moves = []
-                self.best_ai_move = None
-                current_length_3 = len(self.bot_dict[3])
-                current_length_4 = len(self.bot_dict[4])
-                for move in possible_moves:
-                    for pos in move:
-                        if pos not in all_moves and self.board[pos] == '':
+                        if pos not in all_moves and self.board[pos] != self.ai_sign:
                             all_moves.append(pos)
                 shuffled_moves = random.sample(all_moves, len(all_moves))
                 for move in shuffled_moves:
                     self.board[move] = self.ai_sign
                     self.ai_win_conditions()
-                    if len(self.bot_dict[3]) == current_length_3:
+                    if len(self.bot_dict[3]) == current_length_3 and len(self.bot_dict[4]) == current_length_4\
+                            and len(self.bot_dict[5]) == current_length_5:
                         self.best_ai_move = move
-                        self.ai_win_conditions()
                         self.board[move] = ''
                         break
                     else:
                         self.board[move] = ''
-                        self.ai_win_conditions()
-
                 if self.best_ai_move is None:
                     for move in shuffled_moves:
                         self.board[move] = self.ai_sign
                         self.ai_win_conditions()
-                        if len(self.bot_dict[4]) == current_length_4:
+                        if len(self.bot_dict[4]) == current_length_4 and len(self.bot_dict[5]) == current_length_5:
                             self.best_ai_move = move
-                            self.ai_win_conditions()
                             self.board[move] = ''
                             break
                         else:
                             self.board[move] = ''
-                            self.ai_win_conditions()
                 if self.best_ai_move is None:
-                    self.best_ai_move = random.choice(all_moves)
-                    self.button = self.best_ai_move
+                    for move in shuffled_moves:
+                        self.board[move] = self.ai_sign
+                        self.ai_win_conditions()
+                        if len(self.bot_dict[5]) == current_length_5:
+                            self.best_ai_move = move
+                            self.board[move] = ''
+                            break
+                        else:
+                            self.board[move] = ''
+                if self.best_ai_move is None:
+                    self.best_ai_move = random.choice(shuffled_moves)
+                self.button = self.best_ai_move
 
-                print(self.button)
+            elif len(self.bot_dict[2]) > 0:
+                possible_moves = [i for i in self.bot_dict[2] if i != self.ai_sign]
+                all_moves = []
+                self.best_ai_move = None
+                current_length_4 = len(self.bot_dict[4])
+                current_length_5 = len(self.bot_dict[5])
+                for move in possible_moves:
+                    for pos in move:
+                        if pos not in all_moves and self.board[pos] != self.ai_sign:
+                            all_moves.append(pos)
+                shuffled_moves = random.sample(all_moves, len(all_moves))
+                for move in shuffled_moves:
+                    self.board[move] = self.ai_sign
+                    self.ai_win_conditions()
+                    if len(self.bot_dict[4]) == current_length_4 and len(self.bot_dict[5]) == current_length_5:
+                        self.best_ai_move = move
+                        self.board[move] = ''
+                        break
+                    else:
+                        self.board[move] = ''
+                if self.best_ai_move is None:
+                    for move in shuffled_moves:
+                        self.board[move] = self.ai_sign
+                        self.ai_win_conditions()
+                        if len(self.bot_dict[5]) == current_length_5:
+                            self.best_ai_move = move
+                            self.board[move] = ''
+                            break
+                        else:
+                            self.board[move] = ''
+                if self.best_ai_move is None:
+                    self.best_ai_move = random.choice(shuffled_moves)
                 self.button = self.best_ai_move
 
             elif len(self.bot_dict[3]) > 0:
-                print('memes')
-                self.best_ai_move = None
-                possible_moves = [i for i in self.bot_dict[3]]
+                possible_moves = [i for i in self.bot_dict[3] if i != self.ai_sign]
                 all_moves = []
+                self.best_ai_move = None
+                current_length_5 = len(self.bot_dict[5])
                 for move in possible_moves:
                     for pos in move:
-                        if pos not in all_moves and self.board[pos] == '':
+                        if pos not in all_moves and self.board[pos] != self.ai_sign:
                             all_moves.append(pos)
-                if not self.bot_dict[4]:
-                    print('meme')
-                    self.best_ai_move = random.choice(all_moves)
-                    self.button = self.best_ai_move
-                else:
-                    print('meme2')
-                    lose_moves = [move for move in self.bot_dict[4]]
-                    other_moves = []
-                    for move in lose_moves:
-                        for pos in move:
-                            if pos not in other_moves:
-                                other_moves.append(pos)
-                    for i in all_moves:
-                        if i not in other_moves:
-                            self.best_ai_move = i
-                            break
-                    if self.best_ai_move is None:
-                        self.best_ai_move = random.choice(all_moves)
-                    self.button = self.best_ai_move
+                shuffled_moves = random.sample(all_moves, len(all_moves))
+                for move in shuffled_moves:
+                    self.board[move] = self.ai_sign
+                    self.ai_win_conditions()
+                    if len(self.bot_dict[5]) == current_length_5:
+                        self.best_ai_move = move
+                        self.board[move] = ''
+                        break
+                    else:
+                        self.board[move] = ''
+                if self.best_ai_move is None:
+                    spaces_left = [k for k, v in self.board.items() if v == '']
+                    self.best_ai_move = random.choice(spaces_left)
+                self.button = self.best_ai_move
 
         self.buttons[self.button].invoke()
-
 
 
 if __name__ == '__main__':
